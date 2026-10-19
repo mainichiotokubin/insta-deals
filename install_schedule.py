@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from deals.config import ROOT, settings
+from deals.config import ROOT, env, settings
 
 AGENTS = Path.home() / "Library/LaunchAgents"
 PY = str(ROOT / ".venv/bin/python")
@@ -35,11 +35,14 @@ def jobs():
     for t in settings()["publish_times"]:
         h, m = t.split(":")
         times.append({"Hour": int(h), "Minute": int(m)})
-    return [
+    out = [
         job("com.insta-deals.draft", ["draft"], StartCalendarInterval={"Hour": 7, "Minute": 0}),
-        job("com.insta-deals.publish", ["publish"], StartCalendarInterval=times),
         job("com.insta-deals.review", ["review"], RunAtLoad=True, KeepAlive=True),
     ]
+    # Instagram API が使えるときだけ自動投稿を登録（それまでは手動投稿モード）
+    if env("IG_ACCESS_TOKEN", required=False):
+        out.append(job("com.insta-deals.publish", ["publish"], StartCalendarInterval=times))
+    return out
 
 
 def main():

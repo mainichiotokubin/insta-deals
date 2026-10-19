@@ -51,7 +51,8 @@ a.item img{{width:72px;height:72px;object-fit:contain;flex:none}}
 
 def build_page(extra_draft=None):
     s = settings()
-    drafts = [d for d in list_drafts("published")]
+    # 投稿済み＋iPhoneに送った（これから手動投稿する）下書きを載せる
+    drafts = [d for d in list_drafts() if d["status"] in ("published", "exported")]
     if extra_draft:
         drafts.append(extra_draft)
     drafts.sort(key=lambda d: d["id"], reverse=True)
@@ -99,3 +100,13 @@ def publish_images(draft):
             pass
         time.sleep(15)
     raise RuntimeError("GitHub Pages に画像が反映されませんでした")
+
+
+def push_page(message):
+    """リンクページだけを作り直して公開する（半自動モード用）"""
+    build_page()
+    subprocess.run(["git", "add", "docs"], cwd=ROOT, check=True)
+    if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT).returncode == 0:
+        return  # 変更なし
+    subprocess.run(["git", "commit", "-q", "-m", message], cwd=ROOT, check=True)
+    subprocess.run(["git", "push", "-q"], cwd=ROOT, check=True, timeout=60)

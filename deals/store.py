@@ -39,7 +39,7 @@ def recent_item_codes(days):
     border = (datetime.now() - timedelta(days=days)).isoformat()
     codes = {c for c, at in history.items() if at >= border}
     for d in list_drafts():
-        if d["status"] in ("pending", "approved"):
+        if d["status"] in ("pending", "approved", "exported"):
             codes |= {it["code"] for it in d["items"]}
     return codes
 
