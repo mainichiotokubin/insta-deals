@@ -12,6 +12,7 @@ ACCENT = (235, 70, 60)
 DARK = (40, 35, 35)
 SUB = (120, 110, 105)
 GOLD = (245, 170, 30)
+GREEN = (31, 157, 85)
 
 
 def font(weight, size):
@@ -101,9 +102,15 @@ def item_slide(no, item, photo):
     _rounded_card(img, (90, 180, W - 90, 800))
     _paste_fit(img, photo, (130, 210, W - 130, 770))
 
-    if item["point_rate"] > 1:
-        d.rounded_rectangle((90, 760, 470, 840), radius=40, fill=GOLD)
-        d.text((280, 800), f"ポイント{item['point_rate']}倍", font=font(8, 44), fill="white", anchor="mm")
+    # お得ポイントのバッジ（最安値・値下がりは緑、ランキングは赤、ポイントは金）
+    from .rakuten import badges
+    x = 90
+    for text in badges(item):
+        color = GREEN if ("最安値" in text or "値下がり" in text) else ACCENT if "ランキング" in text else GOLD
+        w = int(d.textlength(text, font=font(8, 40))) + 70
+        d.rounded_rectangle((x, 760, x + w, 840), radius=40, fill=color)
+        d.text((x + w // 2, 800), text, font=font(8, 40), fill="white", anchor="mm")
+        x += w + 16
 
     y = 865
     for line in _wrap(d, item["name"], font(6, 44), W - 180, 2):

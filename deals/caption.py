@@ -1,5 +1,7 @@
 """投稿キャプションを作る"""
 
+from .rakuten import badges
+
 NUMS = "①②③④⑤⑥⑦⑧⑨⑩"
 
 
@@ -8,11 +10,11 @@ def build_caption(items, date_label, s):
         "#PR 楽天アフィリエイトを利用しています",
         "",
         f"【{date_label}】今日の楽天お得まとめ",
-        "レビュー評価が高く、ポイントアップ中のアイテムを集めました！",
+        "売れ筋ランキング・ポイントアップ・値下がり中の高評価アイテムを集めました！",
         "",
     ]
     for i, it in enumerate(items):
-        pt = f"／ポイント{it['point_rate']}倍" if it["point_rate"] > 1 else ""
+        pt = "".join(f"／{b}" for b in badges(it))
         lines.append(f"{NUMS[i]} {it['name'][:40]}")
         lines.append(f"　¥{it['price']:,}{pt}／★{it['review_average']:.1f}（{it['review_count']:,}件）")
     lines += [
