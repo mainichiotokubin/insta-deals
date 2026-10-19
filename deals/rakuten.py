@@ -19,10 +19,13 @@ def _get(params):
         **params,
     }
     url = ENDPOINT + "?" + urllib.parse.urlencode(params)
+    # 楽天のアプリ設定「許可されたウェブサイト」と一致させるため Referer/Origin を付ける
+    site = env("PUBLIC_BASE_URL").rstrip("/")
+    origin = "/".join(site.split("/")[:3])
     req = urllib.request.Request(url, headers={
         "accessKey": env("RAKUTEN_ACCESS_KEY"),
-        # 一部環境で Referer なしだと HTTP_REFERRER_MISSING になる報告があるため付ける
-        "Referer": env("PUBLIC_BASE_URL", required=False) or "https://example.com",
+        "Referer": site + "/",
+        "Origin": origin,
         "User-Agent": "insta-deals/1.0",
     })
     with urllib.request.urlopen(req, timeout=20) as res:
@@ -68,6 +71,8 @@ def search_candidates(exclude_codes=()):
             it = it.get("Item", it)  # formatVersion=1 でも動くように
             code = it["itemCode"]
             if code in exclude_codes or code in found:
+                continue
+            if "ふるさと納税" in it["itemName"]:  # 返礼品は「お得情報」に向かないので除外
                 continue
             if it.get("reviewCount", 0) < s["min_review_count"]:
                 continue
