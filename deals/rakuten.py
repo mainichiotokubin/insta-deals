@@ -47,6 +47,7 @@ def _clean_name(name):
     name = re.sub(r"[【\[].*?[】\]]", " ", name)
     name = re.sub(r"[＼\\].*?[／]", " ", name)  # ＼10/19限定 P10倍／ のような期間限定の告知
     name = re.sub(r"\d{1,2}/\d{1,2}\s*(限定|まで|は|から)\S*", " ", name)
+    name = re.sub(r"(ポイント|P)\s*\d+\s*倍", " ", name)  # バッジと重複するので消す
     name = re.sub(r"[★☆◆◇■□●○♪！!]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()
 
