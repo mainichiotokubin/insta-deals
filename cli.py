@@ -86,14 +86,20 @@ def cmd_draft(args):
     draft_id = now.strftime("%Y%m%d-%H%M%S")
     label = _date_label(now)
     images = render.render_post(items, DRAFTS / draft_id, label, s["instagram_handle"])
+    from deals import timing
+    reasons = timing.early_reasons(items)
     draft = {
         "id": draft_id, "status": "pending", "demo": args.demo, "date_label": label,
         "items": items, "images": images, "caption": caption.build_caption(items, label, s),
+        "early_reasons": reasons,
     }
     store.save_draft(draft)
     print(f"下書きを作成しました: {draft_id}（{len(images)}枚）")
     print("確認: python cli.py review")
-    notify("お得投稿の下書きができました", "http://127.0.0.1:8765 で確認して承認してください")
+    if reasons:
+        notify("今日は早めの投稿がおすすめ", f"{timing.EARLY}に投稿しましょう。" + reasons[0])
+    else:
+        notify("お得投稿の下書きができました", f"確認して{timing.NORMAL}に投稿しましょう")
     return draft
 
 

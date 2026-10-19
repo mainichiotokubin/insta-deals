@@ -38,10 +38,23 @@ textarea{width:100%;box-sizing:border-box;height:220px;font:13px/1.5 inherit;bac
 .btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 button{border:0;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer;background:var(--line);color:var(--text)}
 button.ok{background:var(--ok);color:#fff} button.go{background:var(--accent);color:#fff}
+.tip{margin:10px 0 0;padding:8px 12px;border-radius:8px;background:var(--line);font-size:14px}
+.tip.early{background:#fff1d6;color:#7a4a00} .tip ul{margin:4px 0 0;padding-left:20px}
 .howto ol{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.7}
 .err{color:var(--accent);font-size:13px;white-space:pre-wrap} .empty{color:var(--sub)}
 a{color:inherit}
 """
+
+
+def _timing_banner(d):
+    from . import timing
+    reasons = d.get("early_reasons") or []
+    if d["status"] not in ("pending", "approved", "exported"):
+        return ""
+    if not reasons:
+        return f'<p class="tip">おすすめ投稿時間：<b>{timing.NORMAL}</b></p>'
+    items = "".join(f"<li>{html.escape(r)}</li>" for r in reasons)
+    return f'<div class="tip early">⏰ 今日は早めの投稿がおすすめ：<b>{timing.EARLY}</b><ul>{items}</ul></div>'
 
 
 def _card(d):
@@ -69,7 +82,7 @@ def _card(d):
 <input type="hidden" name="id" value="{d['id']}">
 <div class="head"><strong>{html.escape(d['date_label'])} {d['id']}{demo}</strong>
 <span class="badge {d['status']}">{LABEL.get(d['status'], d['status'])}</span></div>
-<div class="strip">{imgs}</div>
+{_timing_banner(d)}<div class="strip">{imgs}</div>
 <div style="font-size:13px">商品ページ確認: {links}</div>{err}
 <p style="margin:12px 0 4px;font-size:13px">キャプション</p>
 <textarea name="caption" {'readonly' if not editable else ''}>{html.escape(d['caption'])}</textarea>

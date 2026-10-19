@@ -80,6 +80,7 @@ def _normalize(it, s, group):
         "url": it.get("affiliateUrl") or it["itemUrl"],
         "keyword": group,
         "rank": None,
+        "point_end": it.get("pointRateEndTime") or "",  # 例: "2026-10-21 23:59"
     }
 
 
