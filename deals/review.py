@@ -1,0 +1,127 @@
+"""下書きを確認・承認するためのローカル画面"""
+import html
+import threading
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from .config import DRAFTS
+from . import store
+
+LABEL = {"pending": "確認待ち", "approved": "承認済み（次の投稿時刻に投稿）", "publishing": "投稿中…",
+         "published": "投稿済み", "rejected": "見送り", "failed": "投稿失敗"}
+
+CSS = """
+:root{--bg:#f6f3f0;--card:#fff;--text:#282323;--sub:#786e69;--accent:#eb463c;--ok:#1f9d55;--line:#e8e0da}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1a19;--card:#2a2725;--text:#f2ecea;--sub:#a99f9a;--line:#3a3532}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,"Hiragino Sans",sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line)} h1{margin:0;font-size:20px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:20px}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--line)}
+.badge.approved{background:var(--ok);color:#fff}.badge.failed{background:var(--accent);color:#fff}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:12px 0}
+.strip img{height:300px;border-radius:8px;flex:none}
+textarea{width:100%;box-sizing:border-box;height:220px;font:13px/1.5 inherit;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px}
+.btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+button{border:0;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer;background:var(--line);color:var(--text)}
+button.ok{background:var(--ok);color:#fff} button.go{background:var(--accent);color:#fff}
+.err{color:var(--accent);font-size:13px;white-space:pre-wrap} .empty{color:var(--sub)}
+a{color:inherit}
+"""
+
+
+def _card(d):
+    imgs = "".join(f'<img src="/img/{d["id"]}/{n}" alt="">' for n in d["images"])
+    links = " ／ ".join(f'<a href="{html.escape(it["url"])}" target="_blank">No.{i}</a>'
+                        for i, it in enumerate(d["items"], 1))
+    editable = d["status"] in ("pending", "approved", "failed", "rejected")
+    btns = ""
+    if editable:
+        btns = ('<div class="btns">'
+                '<button class="ok" name="action" value="approve">承認する</button>'
+                '<button class="go" name="action" value="publish_now">今すぐ投稿</button>'
+                '<button name="action" value="reject">見送る</button></div>')
+    demo = "（デモ・投稿不可）" if d.get("demo") else ""
+    err = f'<p class="err">{html.escape(d["error"])}</p>' if d.get("error") and d["status"] == "failed" else ""
+    return f"""<form class="card" method="post" action="/action">
+<input type="hidden" name="id" value="{d['id']}">
+<div class="head"><strong>{html.escape(d['date_label'])} {d['id']}{demo}</strong>
+<span class="badge {d['status']}">{LABEL.get(d['status'], d['status'])}</span></div>
+<div class="strip">{imgs}</div>
+<div style="font-size:13px">商品ページ確認: {links}</div>{err}
+<p style="margin:12px 0 4px;font-size:13px">キャプション</p>
+<textarea name="caption" {'readonly' if not editable else ''}>{html.escape(d['caption'])}</textarea>
+{btns}</form>"""
+
+
+def _page():
+    drafts = store.list_drafts()
+    active = [d for d in drafts if d["status"] in ("pending", "approved", "failed", "publishing")]
+    done = [d for d in drafts if d["status"] == "published"][-3:]
+    body = "".join(_card(d) for d in reversed(active)) or '<p class="empty">確認待ちの下書きはありません</p>'
+    if done:
+        body += "<h2>最近の投稿</h2>" + "".join(_card(d) for d in reversed(done))
+    return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>お得投稿 確認</title>
+<style>{CSS}</style></head><body><header><h1>お得投稿 確認画面</h1></header><main>{body}</main></body></html>"""
+
+
+def _publish_bg(draft_id):
+    from cli import publish_draft
+    d = store.load_draft(draft_id)
+    try:
+        publish_draft(d)
+    except Exception as e:
+        d.update(status="failed", error=str(e))
+        store.save_draft(d)
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, code, body, ctype="text/html; charset=utf-8"):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        if self.path == "/":
+            return self._send(200, _page().encode("utf-8"))
+        if self.path.startswith("/img/"):
+            parts = self.path.split("/")
+            if len(parts) == 4 and ".." not in parts[2] + parts[3]:
+                f = DRAFTS / parts[2] / parts[3]
+                if f.exists():
+                    return self._send(200, f.read_bytes(), "image/jpeg")
+        self._send(404, b"not found")
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        form = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
+        d = store.load_draft(form.get("id", [""])[0])
+        action = form.get("action", [""])[0]
+        if d:
+            if "caption" in form:
+                d["caption"] = form["caption"][0].replace("\r\n", "\n")
+            if action == "approve":
+                d["status"] = "approved"
+            elif action == "reject":
+                d["status"] = "rejected"
+            elif action == "publish_now" and not d.get("demo"):
+                d["status"] = "publishing"
+            elif action == "publish_now":
+                d.update(status="failed", error="デモの下書きは投稿できません")
+            store.save_draft(d)
+            if d["status"] == "publishing":
+                threading.Thread(target=_publish_bg, args=(d["id"],), daemon=True).start()
+        self.send_response(303)
+        self.send_header("Location", "/")
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+
+def serve(port):
+    print(f"確認画面: http://127.0.0.1:{port}")
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

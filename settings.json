@@ -1,0 +1,27 @@
+{
+  "account_name": "毎日お得便",
+  "instagram_handle": "mainichiotokubin",
+  "items_per_post": 5,
+  "search_keywords": [
+    "洗剤 まとめ買い",
+    "トイレットペーパー",
+    "柔軟剤 詰め替え",
+    "シャンプー 詰め替え",
+    "ティッシュ 箱",
+    "化粧水 大容量",
+    "日焼け止め",
+    "クレンジング",
+    "ハンドクリーム",
+    "歯ブラシ まとめ買い"
+  ],
+  "min_review_count": 100,
+  "min_review_average": 4.2,
+  "max_price": 5000,
+  "only_point_up": true,
+  "repost_after_days": 30,
+  "hashtags": [
+    "#PR", "#楽天", "#楽天市場", "#楽天お買い物マラソン", "#お得情報",
+    "#日用品", "#コスメ", "#節約", "#まとめ買い", "#楽天購入品", "#ポイ活"
+  ],
+  "publish_times": ["12:00", "20:00"]
+}
