@@ -28,6 +28,23 @@ a.item img{{width:72px;height:72px;object-fit:contain;flex:none}}
 <header><h1>{account}</h1><p>【PR】当ページは楽天アフィリエイトを利用しています</p></header>
 <main>{sections}</main>
 <p class="note">価格・ポイント倍率・在庫は投稿時点の情報です。購入前に必ず商品ページでご確認ください。</p>
+<script>
+// Instagram連携の戻り先：認証コードがあればコピー用ボックスを出す（管理者用）
+(function(){{
+  var code = new URLSearchParams(location.search).get("code");
+  if (!code) return;
+  code = code.replace(/#_$/, "");
+  var box = document.createElement("section");
+  box.innerHTML = '<h2>Instagram連携コード</h2><p style="font-size:13px">下のボタンでコピーして、Macに出ている入力欄に貼り付けてください。</p>'
+    + '<button style="width:100%;padding:14px;border:0;border-radius:10px;background:#eb463c;color:#fff;font-size:16px;font-weight:700">コードをコピー</button>'
+    + '<p class="msg" style="font-size:13px;text-align:center"></p>';
+  document.querySelector("main").prepend(box);
+  box.querySelector("button").onclick = function(){{
+    navigator.clipboard.writeText(code).then(function(){{ box.querySelector(".msg").textContent = "コピーしました"; }});
+  }};
+  history.replaceState(null, "", location.pathname);
+}})();
+</script>
 </body></html>
 """
 

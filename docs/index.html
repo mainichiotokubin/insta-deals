@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>まいにちお得便｜商品リンク</title>
+<title>毎日お得便｜商品リンク</title>
 <style>
 body{margin:0;background:#fff7f0;color:#282323;font-family:-apple-system,"Hiragino Sans",sans-serif}
 header{background:#eb463c;color:#fff;padding:20px 16px;text-align:center}
@@ -15,7 +15,24 @@ a.item img{width:72px;height:72px;object-fit:contain;flex:none}
 .name{font-size:14px;line-height:1.4} .price{color:#eb463c;font-weight:700;margin-top:2px}
 .note{font-size:11px;color:#786e69;text-align:center;padding:8px 16px 32px}
 </style></head><body>
-<header><h1>まいにちお得便</h1><p>【PR】当ページは楽天アフィリエイトを利用しています</p></header>
+<header><h1>毎日お得便</h1><p>【PR】当ページは楽天アフィリエイトを利用しています</p></header>
 <main></main>
 <p class="note">価格・ポイント倍率・在庫は投稿時点の情報です。購入前に必ず商品ページでご確認ください。</p>
+<script>
+// Instagram連携の戻り先：認証コードがあればコピー用ボックスを出す（管理者用）
+(function(){
+  var code = new URLSearchParams(location.search).get("code");
+  if (!code) return;
+  code = code.replace(/#_$/, "");
+  var box = document.createElement("section");
+  box.innerHTML = '<h2>Instagram連携コード</h2><p style="font-size:13px">下のボタンでコピーして、Macに出ている入力欄に貼り付けてください。</p>'
+    + '<button style="width:100%;padding:14px;border:0;border-radius:10px;background:#eb463c;color:#fff;font-size:16px;font-weight:700">コードをコピー</button>'
+    + '<p class="msg" style="font-size:13px;text-align:center"></p>';
+  document.querySelector("main").prepend(box);
+  box.querySelector("button").onclick = function(){
+    navigator.clipboard.writeText(code).then(function(){ box.querySelector(".msg").textContent = "コピーしました"; });
+  };
+  history.replaceState(null, "", location.pathname);
+})();
+</script>
 </body></html>

@@ -62,6 +62,34 @@ def publish_carousel(image_urls, caption):
     return _call("POST", f"{ig}/media_publish", {"creation_id": carousel})["id"]
 
 
+def exchange_code(code, redirect_uri):
+    """Instagramログインの認証コード → 長期トークン（60日）に交換して .env に保存する"""
+    form = urllib.parse.urlencode({
+        "client_id": env("IG_APP_ID"),
+        "client_secret": env("IG_APP_SECRET"),
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri,
+        "code": code,
+    }).encode("utf-8")
+    try:
+        with urllib.request.urlopen("https://api.instagram.com/oauth/access_token", data=form, timeout=30) as res:
+            short = json.loads(res.read().decode("utf-8"))
+        url = "https://graph.instagram.com/access_token?" + urllib.parse.urlencode({
+            "grant_type": "ig_exchange_token",
+            "client_secret": env("IG_APP_SECRET"),
+            "access_token": short["access_token"],
+        })
+        with urllib.request.urlopen(url, timeout=30) as res:
+            long = json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise InstagramError(f"{e.code} {e.read().decode('utf-8', 'replace')}") from None
+    set_env("IG_ACCESS_TOKEN", long["access_token"])
+    set_env("IG_TOKEN_REFRESHED_AT", datetime.now().isoformat(timespec="seconds"))
+    if short.get("user_id"):
+        set_env("IG_LOGIN_USER_ID", str(short["user_id"]))
+    return long.get("expires_in")
+
+
 def me():
     """トークンが正しいか確認し、Instagram ユーザーIDを返す"""
     return _call("GET", "me", {"fields": "user_id,username,account_type"})

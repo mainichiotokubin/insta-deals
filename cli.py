@@ -10,6 +10,7 @@ import argparse
 import random
 import subprocess
 import sys
+import urllib.parse
 from datetime import datetime
 
 from deals import caption, render, store
@@ -180,6 +181,38 @@ def cmd_check(args):
     print("すべてOKです" if ok else "NG の項目を確認してください")
 
 
+def cmd_set_token(args):
+    """クリップボードにコピーしたInstagramトークンを .env に保存する（画面には出さない）"""
+    from datetime import datetime
+    from deals.config import set_env
+    token = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout.strip()
+    if not token.startswith("IG") or len(token) < 50 or any(c.isspace() for c in token):
+        sys.exit("クリップボードにトークンがありません。トークンをコピーしてからもう一度実行してください")
+    set_env("IG_ACCESS_TOKEN", token)
+    set_env("IG_TOKEN_REFRESHED_AT", datetime.now().isoformat(timespec="seconds"))
+    subprocess.run(["pbcopy"], input="", text=True)  # クリップボードから消しておく
+    print(f"保存しました（{token[:6]}…{len(token)}文字）")
+
+
+def cmd_ig_login(args):
+    """リンクページに表示された連携コードを貼り付けてもらい、トークンに交換して保存する"""
+    from deals import instagram
+    from deals.config import env
+    redirect = env("PUBLIC_BASE_URL").rstrip("/") + "/"
+    script = ('text returned of (display dialog "リンクページの「コードをコピー」を押してから、ここに貼り付けて「保存」を押してください"'
+              ' default answer "" with hidden answer buttons {"キャンセル", "保存"} default button "保存"'
+              ' with title "毎日お得便" giving up after 600)')
+    code = subprocess.run(["osascript", "-e", script], capture_output=True, text=True).stdout.strip()
+    if "code=" in code:
+        code = urllib.parse.parse_qs(urllib.parse.urlparse(code).query).get("code", [""])[0]
+    code = code.replace("#_", "").strip()
+    if len(code) < 20 or any(c.isspace() for c in code):
+        sys.exit(f"コードを受け取れませんでした（{len(code)}文字）。もう一度やり直してください")
+    days = (instagram.exchange_code(code, redirect) or 0) // 86400
+    subprocess.run(["pbcopy"], input="", text=True)
+    print(f"Instagramのトークンを保存しました（有効期限 約{days}日、自動更新あり）")
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -194,6 +227,8 @@ def main():
     r.set_defaults(func=cmd_review)
     sub.add_parser("refresh-token").set_defaults(func=cmd_refresh)
     sub.add_parser("check").set_defaults(func=cmd_check)
+    sub.add_parser("set-token").set_defaults(func=cmd_set_token)
+    sub.add_parser("ig-login").set_defaults(func=cmd_ig_login)
     args = p.parse_args()
     args.func(args)
 
