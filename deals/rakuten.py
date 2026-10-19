@@ -45,6 +45,8 @@ def _image_url(item):
 def _clean_name(name):
     # 【】や★などの装飾を落として短くする
     name = re.sub(r"[【\[].*?[】\]]", " ", name)
+    name = re.sub(r"[＼\\].*?[／]", " ", name)  # ＼10/19限定 P10倍／ のような期間限定の告知
+    name = re.sub(r"\d{1,2}/\d{1,2}\s*(限定|まで|は|から)\S*", " ", name)
     name = re.sub(r"[★☆◆◇■□●○♪！!]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()
 
