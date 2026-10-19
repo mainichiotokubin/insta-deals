@@ -5,7 +5,11 @@ from .rakuten import badges
 NUMS = "①②③④⑤⑥⑦⑧⑨⑩"
 
 
-def build_caption(items, date_label, s):
+def build_caption(items, date_label, s, events=None):
+    """events: 開催中の楽天イベント [(名前, ハッシュタグ)]。None のときはその場で調べる"""
+    if events is None:
+        from .events import active_events
+        events = active_events()
     lines = [
         "#PR 楽天アフィリエイトを利用しています",
         "",
@@ -24,6 +28,6 @@ def build_caption(items, date_label, s):
         "",
         "※価格・ポイント倍率・在庫は投稿時点の情報です。購入前に必ず商品ページでご確認ください。",
         "",
-        " ".join(s["hashtags"]),
+        " ".join(s["hashtags"] + [tag for _, tag in events]),
     ]
     return "\n".join(lines)

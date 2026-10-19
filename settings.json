@@ -23,7 +23,6 @@
     "#PR",
     "#楽天",
     "#楽天市場",
-    "#楽天お買い物マラソン",
     "#お得情報",
     "#日用品",
     "#コスメ",
@@ -57,5 +56,17 @@
     "飲む日焼け止め",
     "プロテイン",
     "医薬品"
+  ],
+  "event_hashtags": [
+    {
+      "name": "お買い物マラソン",
+      "url": "https://event.rakuten.co.jp/campaign/point-up/marathon/",
+      "tag": "#楽天お買い物マラソン"
+    },
+    {
+      "name": "楽天スーパーSALE",
+      "url": "https://event.rakuten.co.jp/campaign/supersale/",
+      "tag": "#楽天スーパーセール"
+    }
   ]
 }
