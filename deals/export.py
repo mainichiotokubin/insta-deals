@@ -21,8 +21,9 @@ def _as_str(s):
 def to_icloud_drive(draft, folder_name):
     dest = ICLOUD / folder_name / draft["id"]
     dest.mkdir(parents=True, exist_ok=True)
-    for name in draft["images"]:
-        shutil.copy(DRAFTS / draft["id"] / name, dest / name)
+    for name in draft["images"] + [p["image"] for p in draft.get("threads", [])]:
+        if (DRAFTS / draft["id"] / name).exists():
+            shutil.copy(DRAFTS / draft["id"] / name, dest / name)
     (dest / "caption.txt").write_text(draft["caption"], encoding="utf-8")
     if draft.get("threads"):
         (dest / "threads.txt").write_text(threads_note_text(draft), encoding="utf-8")
@@ -50,11 +51,14 @@ end tell''')
 
 
 def threads_note_text(draft):
-    from .threads import TIMES
-    out = [f"{draft['date_label']} Threads用（1日5投稿）", ""]
+    from .threads import QUESTION_TIME, TIMES
+    out = [f"{draft['date_label']} Threads用", ""]
     for p in draft.get("threads", []):
         t = TIMES[(p["no"] - 1) % len(TIMES)]
-        out += [f"■ 投稿{p['no']}（おすすめ {t}／画像 {p['image']}）", p["text"], "", "▼返信に貼る", p["reply"], "", "――――――", ""]
+        out += [f"■ 投稿{p['no']}（おすすめ {t}／写真 {p['image']}）", "▼本文", p["text"], "",
+                "▼最初の返信に貼る", p["reply"], "", "――――――", ""]
+    if draft.get("threads_question"):
+        out += [f"■ みんなに質問（おすすめ {QUESTION_TIME}／写真なし・リンクなし）", draft["threads_question"]]
     return "\n".join(out)
 
 
@@ -70,6 +74,18 @@ tell application "Notes"
 end tell''')
 
 
+def threads_photos(draft, album):
+    names = [p["image"] for p in draft.get("threads", []) if (DRAFTS / draft["id"] / p["image"]).exists()]
+    if not names:
+        return
+    files = ", ".join(f'POSIX file {_as_str(str(DRAFTS / draft["id"] / n))}' for n in names)
+    _osascript(f'''
+tell application "Photos"
+    if not (exists album {_as_str(album)}) then make new album named {_as_str(album)}
+    import {{{files}}} into album {_as_str(album)} skip check duplicates true
+end tell''')
+
+
 def export_for_phone(draft):
     """できた方法を返す。どれか1つでも成功すればOK"""
     name = settings()["account_name"]
@@ -77,7 +93,8 @@ def export_for_phone(draft):
     for label, fn in (("iCloud Drive", lambda: to_icloud_drive(draft, name)),
                       ("写真アプリ", lambda: to_photos(draft, name)),
                       ("メモアプリ", lambda: to_notes(draft, name)),
-                      ("メモアプリ（Threads）", lambda: to_threads_note(draft, name))):
+                      ("メモアプリ（Threads）", lambda: to_threads_note(draft, name)),
+                      ("写真アプリ（Threads）", lambda: threads_photos(draft, name + " Threads"))):
         try:
             fn()
             done.append(label)

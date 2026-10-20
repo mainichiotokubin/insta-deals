@@ -155,4 +155,9 @@ def render_post(items, out_dir: Path, date_label, account):
         name = f"{i:02d}.jpg"
         s.save(out_dir / name, "JPEG", quality=90)
         names.append(name)
+    # Threads用：文字の入っていない商品写真（白い正方形に収める）
+    for i, p in enumerate(photos, 1):
+        sq = Image.new("RGB", (1080, 1080), "white")
+        _paste_fit(sq, p.resize((p.width * 2, p.height * 2), Image.LANCZOS) if p.width < 540 else p, (60, 60, 1020, 1020))
+        sq.save(out_dir / f"t{i}.jpg", "JPEG", quality=92)
     return names

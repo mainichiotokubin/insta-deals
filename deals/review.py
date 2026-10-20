@@ -44,6 +44,8 @@ button.ok{background:var(--ok);color:#fff} button.go{background:var(--accent);co
 .tp{border-top:1px solid var(--line);padding:10px 0} .tph{font-size:13px;color:var(--sub)}
 .tp pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;background:var(--bg);padding:10px;border-radius:8px}
 .tp pre.reply{font-size:12px;word-break:break-all}
+.tpi{width:120px;height:120px;object-fit:contain;background:#fff;border-radius:8px;float:right;margin-left:10px}
+.tpl{font-size:12px;color:var(--sub);margin-top:8px} .tp:after{content:"";display:block;clear:both}
 .howto ol{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.7}
 .err{color:var(--accent);font-size:13px;white-space:pre-wrap} .empty{color:var(--sub)}
 a{color:inherit}
@@ -62,7 +64,7 @@ def _timing_banner(d):
 
 
 def _threads_block(d):
-    from .threads import TIMES
+    from .threads import QUESTION_TIME, TIMES
     posts = d.get("threads") or []
     if not posts:
         return ""
@@ -70,12 +72,17 @@ def _threads_block(d):
     for p in posts:
         t = TIMES[(p["no"] - 1) % len(TIMES)]
         rows.append(
-            f'<div class="tp"><div class="tph">投稿{p["no"]}（型：{html.escape(p["pattern_name"])}／おすすめ {t}／'
-            f'画像 {p["image"]}）</div><pre>{html.escape(p["text"])}</pre>'
-            '<button type="button" onclick="copyPre(this,0)">本文をコピー</button> '
-            f'<pre class="reply">{html.escape(p["reply"])}</pre>'
+            f'<div class="tp"><img class="tpi" src="/img/{d["id"]}/{p["image"]}" alt="">'
+            f'<div class="tph">投稿{p["no"]}（型：{html.escape(p["pattern_name"])}／おすすめ {t}）</div>'
+            f'<div class="tpl">▼本文（この写真と一緒に投稿）</div><pre>{html.escape(p["text"])}</pre>'
+            '<button type="button" onclick="copyPre(this,0)">本文をコピー</button>'
+            f'<div class="tpl">▼最初の返信に貼る</div><pre class="reply">{html.escape(p["reply"])}</pre>'
             '<button type="button" onclick="copyPre(this,1)">返信をコピー</button></div>')
-    return f'<details class="threads"><summary>🧵 Threads用の投稿（{len(posts)}件）</summary>{"".join(rows)}</details>'
+    q = d.get("threads_question")
+    if q:
+        rows.append(f'<div class="tp"><div class="tph">みんなに質問（おすすめ {QUESTION_TIME}／写真・リンクなし）</div>'
+                    f'<pre>{html.escape(q)}</pre><button type="button" onclick="copyPre(this,0)">コピー</button></div>')
+    return f'<details class="threads"><summary>🧵 Threads用の投稿（{len(posts)}件＋質問）</summary>{"".join(rows)}</details>'
 
 
 def _card(d):
