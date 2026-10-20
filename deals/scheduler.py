@@ -132,6 +132,20 @@ def _record_views():
         LOG.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _save_photos(draft):
+    """承認された下書きの画像を、写真アプリのアルバム「毎日お得便」にも保存しておく（1回だけ）"""
+    from . import export
+    from .config import settings
+    if draft.get("photos_saved"):
+        return
+    try:
+        export.to_photos(draft, settings()["account_name"])
+        draft["photos_saved"] = True
+        store.save_draft(draft)
+    except Exception as e:
+        print(f"写真アプリへの保存に失敗: {e}")
+
+
 def tick(now=None):
     from . import instagram, threads_api
     now = now or datetime.now()
@@ -145,6 +159,7 @@ def tick(now=None):
     for d in store.list_drafts():
         if d.get("demo") or not d.get("approved_at") or not _is_today(d, now):
             continue
+        _save_photos(d)
         if _instagram(d, now):
             d = store.load_draft(d["id"])
         _threads(d, now)
