@@ -74,26 +74,26 @@ def build_page(extra_draft=None):
 
 
 def publish_images(draft):
-    """画像を docs/posts/<id>/ にコピーし、git push して公開URLを返す"""
+    """画像（インスタ用・Threads用）を docs/posts/<id>/ に置いて git push し、{ファイル名: 公開URL} を返す"""
+    names = list(draft["images"]) + [p["image"] for p in draft.get("threads", [])]
+    names = [n for n in names if (DRAFTS / draft["id"] / n).exists()]
     dest = SITE / "posts" / draft["id"]
     dest.mkdir(parents=True, exist_ok=True)
-    for name in draft["images"]:
+    for name in names:
         shutil.copy(DRAFTS / draft["id"] / name, dest / name)
     build_page(extra_draft=draft)
 
-    def git(*args):
-        subprocess.run(["git", *args], cwd=ROOT, check=True)
-
-    git("add", "docs")
-    git("commit", "-m", f"post {draft['id']}")
-    git("push")
+    subprocess.run(["git", "add", "docs"], cwd=ROOT, check=True)
+    if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT).returncode != 0:
+        subprocess.run(["git", "commit", "-q", "-m", f"post {draft['id']}"], cwd=ROOT, check=True)
+        subprocess.run(["git", "push", "-q"], cwd=ROOT, check=True, timeout=60)
 
     base = env("PUBLIC_BASE_URL").rstrip("/")
-    urls = [f"{base}/posts/{draft['id']}/{n}" for n in draft["images"]]
+    urls = {n: f"{base}/posts/{draft['id']}/{n}" for n in names}
     # GitHub Pages に反映されるまで待つ（最大10分）
     for _ in range(40):
         try:
-            with urllib.request.urlopen(urls[-1], timeout=15) as res:
+            with urllib.request.urlopen(urls[names[-1]], timeout=15) as res:
                 if res.status == 200:
                     return urls
         except Exception:

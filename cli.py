@@ -117,8 +117,9 @@ def publish_draft(draft):
     if draft.get("demo"):
         raise RuntimeError("デモの下書きは投稿できません")
     instagram.refresh_token_if_needed()
-    urls = site.publish_images(draft)
-    media_id = instagram.publish_carousel(urls, draft["caption"])
+    urls = draft.get("public_urls") or site.publish_images(draft)
+    draft["public_urls"] = urls
+    media_id = instagram.publish_carousel([urls[n] for n in draft["images"]], draft["caption"])
     draft.update(status="published", ig_media_id=media_id,
                  published_at=datetime.now().isoformat(timespec="seconds"))
     store.save_draft(draft)
@@ -225,6 +226,25 @@ def cmd_ig_login(args):
     print(f"Instagramのトークンを保存しました（有効期限 約{days}日、自動更新あり）")
 
 
+def cmd_threads_token(args):
+    """Macに入力欄を出して、Threadsのトークンを貼り付けてもらい保存する（画面には表示しない）"""
+    from deals import threads_api
+    script = ('text returned of (display dialog "Threadsのアクセストークンを貼り付けて「保存」を押してください"'
+              ' default answer "" with hidden answer buttons {"キャンセル", "保存"} default button "保存"'
+              ' with title "毎日お得便" giving up after 600)')
+    token = subprocess.run(["osascript", "-e", script], capture_output=True, text=True).stdout.strip()
+    if len(token) < 50 or any(c.isspace() for c in token):
+        sys.exit(f"トークンを受け取れませんでした（{len(token)}文字）")
+    info = threads_api.save_token(token)
+    subprocess.run(["pbcopy"], input="", text=True)
+    print(f"Threadsのトークンを保存しました：@{info.get('username')}")
+
+
+def cmd_tick(args):
+    from deals import scheduler
+    scheduler.tick()
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -241,6 +261,8 @@ def main():
     sub.add_parser("check").set_defaults(func=cmd_check)
     sub.add_parser("set-token").set_defaults(func=cmd_set_token)
     sub.add_parser("ig-login").set_defaults(func=cmd_ig_login)
+    sub.add_parser("threads-token").set_defaults(func=cmd_threads_token)
+    sub.add_parser("tick").set_defaults(func=cmd_tick)
     args = p.parse_args()
     args.func(args)
 

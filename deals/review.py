@@ -20,7 +20,7 @@ HOWTO = """<div class="card howto"><strong>使い方（手動投稿モード）<
 
 def _auto_mode():
     from .config import env
-    return bool(env("IG_ACCESS_TOKEN", required=False))
+    return bool(env("IG_ACCESS_TOKEN", required=False) or env("THREADS_ACCESS_TOKEN", required=False))
 
 CSS = """
 :root{--bg:#f6f3f0;--card:#fff;--text:#282323;--sub:#786e69;--accent:#eb463c;--ok:#1f9d55;--line:#e8e0da}
@@ -63,6 +63,21 @@ def _timing_banner(d):
     return f'<div class="tip early">⏰ 今日は早めの投稿がおすすめ：<b>{timing.EARLY}</b><ul>{items}</ul></div>'
 
 
+def _status_label(d):
+    if d["status"] == "approved":
+        from .scheduler import ig_time
+        return f"承認済み：インスタ {ig_time(d)}・Threads は予定時刻に順番に投稿"
+    return LABEL.get(d["status"], d["status"])
+
+
+def _tstate(p, t):
+    if p.get("media_id"):
+        return "✅ 投稿済み"
+    if p.get("error"):
+        return f"⚠️ 失敗：{html.escape(p['error'][:80])}"
+    return f"予定 {t}"
+
+
 def _threads_block(d):
     from .threads import QUESTION_TIMES, TIMES
     posts = d.get("threads") or []
@@ -73,14 +88,16 @@ def _threads_block(d):
         t = TIMES[(p["no"] - 1) % len(TIMES)]
         rows.append(
             f'<div class="tp"><img class="tpi" src="/img/{d["id"]}/{p["image"]}" alt="">'
-            f'<div class="tph">投稿{p["no"]}（型：{html.escape(p["pattern_name"])}／おすすめ {t}）</div>'
+            f'<div class="tph">投稿{p["no"]}（型：{html.escape(p["pattern_name"])}／{_tstate(p, t)}）</div>'
             f'<div class="tpl">▼本文（この写真と一緒に投稿）</div><pre>{html.escape(p["text"])}</pre>'
             '<button type="button" onclick="copyPre(this,0)">本文をコピー</button>'
             f'<div class="tpl">▼最初の返信に貼る</div><pre class="reply">{html.escape(p["reply"])}</pre>'
             '<button type="button" onclick="copyPre(this,1)">返信をコピー</button></div>')
+    qstate = d.get("threads_q_state") or []
     for k, q in enumerate(d.get("threads_questions") or []):
         t = QUESTION_TIMES[k % len(QUESTION_TIMES)]
-        rows.append(f'<div class="tp"><div class="tph">みんなに質問{k + 1}（おすすめ {t}／写真・リンクなし）</div>'
+        st = qstate[k] if k < len(qstate) else {}
+        rows.append(f'<div class="tp"><div class="tph">みんなに質問{k + 1}（{_tstate(st, t)}／写真・リンクなし）</div>'
                     f'<pre>{html.escape(q)}</pre><button type="button" onclick="copyPre(this,0)">コピー</button></div>')
     return f'<details class="threads"><summary>🧵 Threads用の投稿（商品{len(posts)}件＋質問）</summary>{"".join(rows)}</details>'
 
@@ -109,7 +126,7 @@ def _card(d):
     return f"""<form class="card" method="post" action="/action">
 <input type="hidden" name="id" value="{d['id']}">
 <div class="head"><strong>{html.escape(d['date_label'])} {d['id']}{demo}</strong>
-<span class="badge {d['status']}">{LABEL.get(d['status'], d['status'])}</span></div>
+<span class="badge {d['status']}">{_status_label(d)}</span></div>
 {_timing_banner(d)}<div class="strip">{imgs}</div>
 <div style="font-size:13px">商品ページ確認: {links}</div>{err}
 {_threads_block(d)}
@@ -214,7 +231,9 @@ class Handler(BaseHTTPRequestHandler):
             if "caption" in form:
                 d["caption"] = form["caption"][0].replace("\r\n", "\n")
             if action == "approve":
+                from datetime import datetime
                 d["status"] = "approved"
+                d["approved_at"] = datetime.now().isoformat(timespec="seconds")
             elif action == "reject":
                 d["status"] = "rejected"
             elif action == "publish_now" and not d.get("demo"):

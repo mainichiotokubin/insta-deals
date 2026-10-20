@@ -40,8 +40,8 @@ def jobs():
         job("com.insta-deals.review", ["review"], RunAtLoad=True, KeepAlive=True),
     ]
     # Instagram API が使えるときだけ自動投稿を登録（それまでは手動投稿モード）
-    if env("IG_ACCESS_TOKEN", required=False):
-        out.append(job("com.insta-deals.publish", ["publish"], StartCalendarInterval=times))
+    if env("IG_ACCESS_TOKEN", required=False) or env("THREADS_ACCESS_TOKEN", required=False):
+        out.append(job("com.insta-deals.tick", ["tick"], StartInterval=600))
     return out
 
 
