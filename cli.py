@@ -93,6 +93,9 @@ def cmd_draft(args):
         "items": items, "images": images, "caption": caption.build_caption(items, label, s),
         "early_reasons": reasons,
     }
+    from deals import threads
+    draft["threads"] = threads.build_posts(items)
+    threads.log_posts(draft_id, draft["threads"])
     store.save_draft(draft)
     print(f"下書きを作成しました: {draft_id}（{len(images)}枚）")
     print("確認: python cli.py review")

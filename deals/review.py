@@ -40,6 +40,10 @@ button{border:0;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointe
 button.ok{background:var(--ok);color:#fff} button.go{background:var(--accent);color:#fff}
 .tip{margin:10px 0 0;padding:8px 12px;border-radius:8px;background:var(--line);font-size:14px}
 .tip.early{background:#fff1d6;color:#7a4a00} .tip ul{margin:4px 0 0;padding-left:20px}
+.threads{margin-top:12px} .threads summary{cursor:pointer;font-weight:600}
+.tp{border-top:1px solid var(--line);padding:10px 0} .tph{font-size:13px;color:var(--sub)}
+.tp pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.6;background:var(--bg);padding:10px;border-radius:8px}
+.tp pre.reply{font-size:12px;word-break:break-all}
 .howto ol{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.7}
 .err{color:var(--accent);font-size:13px;white-space:pre-wrap} .empty{color:var(--sub)}
 a{color:inherit}
@@ -55,6 +59,23 @@ def _timing_banner(d):
         return f'<p class="tip">おすすめ投稿時間：<b>{timing.NORMAL}</b></p>'
     items = "".join(f"<li>{html.escape(r)}</li>" for r in reasons)
     return f'<div class="tip early">⏰ 今日は早めの投稿がおすすめ：<b>{timing.EARLY}</b><ul>{items}</ul></div>'
+
+
+def _threads_block(d):
+    from .threads import TIMES
+    posts = d.get("threads") or []
+    if not posts:
+        return ""
+    rows = []
+    for p in posts:
+        t = TIMES[(p["no"] - 1) % len(TIMES)]
+        rows.append(
+            f'<div class="tp"><div class="tph">投稿{p["no"]}（型：{html.escape(p["pattern_name"])}／おすすめ {t}／'
+            f'画像 {p["image"]}）</div><pre>{html.escape(p["text"])}</pre>'
+            '<button type="button" onclick="copyPre(this,0)">本文をコピー</button> '
+            f'<pre class="reply">{html.escape(p["reply"])}</pre>'
+            '<button type="button" onclick="copyPre(this,1)">返信をコピー</button></div>')
+    return f'<details class="threads"><summary>🧵 Threads用の投稿（{len(posts)}件）</summary>{"".join(rows)}</details>'
 
 
 def _card(d):
@@ -84,7 +105,8 @@ def _card(d):
 <span class="badge {d['status']}">{LABEL.get(d['status'], d['status'])}</span></div>
 {_timing_banner(d)}<div class="strip">{imgs}</div>
 <div style="font-size:13px">商品ページ確認: {links}</div>{err}
-<p style="margin:12px 0 4px;font-size:13px">キャプション</p>
+{_threads_block(d)}
+<p style="margin:12px 0 4px;font-size:13px">インスタのキャプション</p>
 <textarea name="caption" {'readonly' if not editable else ''}>{html.escape(d['caption'])}</textarea>
 {btns}</form>"""
 
@@ -105,6 +127,10 @@ def _page():
 {'<meta http-equiv="refresh" content="3">' if busy else ''}
 <style>{CSS}</style></head><body><header><h1>お得投稿 確認画面</h1></header><main>{body}</main>
 <script>
+function copyPre(btn, i){{
+  var t = btn.parentElement.querySelectorAll("pre")[i].textContent;
+  navigator.clipboard.writeText(t).then(function(){{ btn.textContent = "コピーしました"; }});
+}}
 function copyCap(btn){{
   var t = btn.closest("form").querySelector("textarea").value;
   navigator.clipboard.writeText(t).then(function(){{ btn.textContent = "コピーしました"; }});

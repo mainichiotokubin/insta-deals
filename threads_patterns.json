@@ -1,0 +1,87 @@
+{
+  "_説明": "Threads投稿の「型」。週1回のリサーチと、自分の投稿の結果をもとに見直す。{...} は商品ごとに自動で入る。needs に書いた情報がない商品には使わない。体験談（使ってみた・愛用中など）は書かないこと。 根拠のない「定価より安い」「他より安い」などの表現は使わないこと（景品表示法）。",
+  "patterns": [
+    {
+      "id": "loss",
+      "name": "知らないと損",
+      "hooks": [
+        "【見逃し注意】{short}、今ポイント{point_rate}倍になってる…！",
+        "知らないと損かも…{short}が今ポイント{point_rate}倍👀"
+      ],
+      "needs": [
+        "points"
+      ]
+    },
+    {
+      "id": "review_numbers",
+      "name": "レビュー数インパクト",
+      "hooks": [
+        "レビュー{count}件で★{avg}って、もう答え出てない？",
+        "★{avg}・レビュー{count}件。数字が強すぎる{emoji}"
+      ],
+      "needs": []
+    },
+    {
+      "id": "empathy",
+      "name": "共感から入る",
+      "hooks": [
+        "{pain}",
+        "{pain}\nわかる人いる？🙋‍♀️"
+      ],
+      "needs": []
+    },
+    {
+      "id": "ranking",
+      "name": "ランキング",
+      "hooks": [
+        "今、楽天の{rank_label}ランキング{rank}位に入ってるこれ、気になってた人いる？👑",
+        "楽天{rank_label}ランキング{rank}位。売れてる理由、レビュー見たら納得…"
+      ],
+      "needs": [
+        "rank"
+      ]
+    },
+    {
+      "id": "per_unit",
+      "name": "1個あたりの安さ",
+      "hooks": [
+        "1{unit}あたり{per_unit}円って、安すぎない…？{emoji}",
+        "{short}、計算したら1{unit}{per_unit}円だった👀"
+      ],
+      "needs": [
+        "per_unit"
+      ]
+    },
+    {
+      "id": "points",
+      "name": "ポイント倍率",
+      "hooks": [
+        "ポイント{point_rate}倍、今のうちに見ておいて💰",
+        "{short}がポイント{point_rate}倍になってる…！ストック買うなら今かも"
+      ],
+      "needs": [
+        "points"
+      ]
+    },
+    {
+      "id": "deadline",
+      "name": "期限あり",
+      "hooks": [
+        "⏰今日の23:59までのお得、見逃してない？",
+        "今日中に見てほしいやつ⏰"
+      ],
+      "needs": [
+        "deadline"
+      ]
+    },
+    {
+      "id": "question",
+      "name": "質問で始める",
+      "hooks": [
+        "{topic}、みんな何使ってる？\n最近気になってるのがこれ👇",
+        "{topic}って、どこで買ってる？"
+      ],
+      "needs": []
+    }
+  ]
+}

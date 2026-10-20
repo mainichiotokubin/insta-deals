@@ -24,6 +24,8 @@ def to_icloud_drive(draft, folder_name):
     for name in draft["images"]:
         shutil.copy(DRAFTS / draft["id"] / name, dest / name)
     (dest / "caption.txt").write_text(draft["caption"], encoding="utf-8")
+    if draft.get("threads"):
+        (dest / "threads.txt").write_text(threads_note_text(draft), encoding="utf-8")
     return dest
 
 
@@ -47,13 +49,35 @@ tell application "Notes"
 end tell''')
 
 
+def threads_note_text(draft):
+    from .threads import TIMES
+    out = [f"{draft['date_label']} Threads用（1日5投稿）", ""]
+    for p in draft.get("threads", []):
+        t = TIMES[(p["no"] - 1) % len(TIMES)]
+        out += [f"■ 投稿{p['no']}（おすすめ {t}／画像 {p['image']}）", p["text"], "", "▼返信に貼る", p["reply"], "", "――――――", ""]
+    return "\n".join(out)
+
+
+def to_threads_note(draft, folder):
+    import html
+    if not draft.get("threads"):
+        return
+    body = "<br>".join(html.escape(line) for line in threads_note_text(draft).split("\n"))
+    _osascript(f'''
+tell application "Notes"
+    if not (exists folder {_as_str(folder)}) then make new folder with properties {{name:{_as_str(folder)}}}
+    make new note at folder {_as_str(folder)} with properties {{body:{_as_str(body)}}}
+end tell''')
+
+
 def export_for_phone(draft):
     """できた方法を返す。どれか1つでも成功すればOK"""
     name = settings()["account_name"]
     done, errors = [], []
     for label, fn in (("iCloud Drive", lambda: to_icloud_drive(draft, name)),
                       ("写真アプリ", lambda: to_photos(draft, name)),
-                      ("メモアプリ", lambda: to_notes(draft, name))):
+                      ("メモアプリ", lambda: to_notes(draft, name)),
+                      ("メモアプリ（Threads）", lambda: to_threads_note(draft, name))):
         try:
             fn()
             done.append(label)
