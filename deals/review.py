@@ -64,7 +64,7 @@ def _timing_banner(d):
 
 
 def _threads_block(d):
-    from .threads import QUESTION_TIME, TIMES
+    from .threads import QUESTION_TIMES, TIMES
     posts = d.get("threads") or []
     if not posts:
         return ""
@@ -78,11 +78,11 @@ def _threads_block(d):
             '<button type="button" onclick="copyPre(this,0)">本文をコピー</button>'
             f'<div class="tpl">▼最初の返信に貼る</div><pre class="reply">{html.escape(p["reply"])}</pre>'
             '<button type="button" onclick="copyPre(this,1)">返信をコピー</button></div>')
-    q = d.get("threads_question")
-    if q:
-        rows.append(f'<div class="tp"><div class="tph">みんなに質問（おすすめ {QUESTION_TIME}／写真・リンクなし）</div>'
+    for k, q in enumerate(d.get("threads_questions") or []):
+        t = QUESTION_TIMES[k % len(QUESTION_TIMES)]
+        rows.append(f'<div class="tp"><div class="tph">みんなに質問{k + 1}（おすすめ {t}／写真・リンクなし）</div>'
                     f'<pre>{html.escape(q)}</pre><button type="button" onclick="copyPre(this,0)">コピー</button></div>')
-    return f'<details class="threads"><summary>🧵 Threads用の投稿（{len(posts)}件＋質問）</summary>{"".join(rows)}</details>'
+    return f'<details class="threads"><summary>🧵 Threads用の投稿（商品{len(posts)}件＋質問）</summary>{"".join(rows)}</details>'
 
 
 def _card(d):

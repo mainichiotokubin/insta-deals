@@ -95,7 +95,7 @@ def cmd_draft(args):
     }
     from deals import threads
     draft["threads"] = threads.build_posts(items)
-    draft["threads_question"] = threads.question_post()
+    draft["threads_questions"] = threads.question_posts()
     threads.log_posts(draft_id, draft["threads"])
     store.save_draft(draft)
     print(f"下書きを作成しました: {draft_id}（{len(images)}枚）")

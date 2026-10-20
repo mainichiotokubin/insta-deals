@@ -27,7 +27,7 @@ MAX_LEN = 500  # Threads の文字数上限
 
 # 投稿時間のおすすめ（商品5投稿＋質問投稿）
 TIMES = ["7:30", "12:15", "18:00", "20:30", "22:00"]
-QUESTION_TIME = "21:15"
+QUESTION_TIMES = ["8:30", "21:15"]
 
 # 商品ジャンルごとの「共感ひとこと」「感情の一言」「こんな人に向いてそう」
 TOPICS = [
@@ -142,7 +142,7 @@ def build_posts(items, today=None, seed=None):
         f = _facts(item, today)
         cands = [p for p in patterns if _usable(p, f) and p["id"] not in used] or \
                 [p for p in patterns if _usable(p, f)]
-        pat = rnd.choices(cands, weights=[weights.get(p["id"], 1.0) for p in cands])[0]
+        pat = rnd.choices(cands, weights=[p.get("weight", 1.0) * weights.get(p["id"], 1.0) for p in cands])[0]
         used.add(pat["id"])
         hook = rnd.choice(pat["hooks"]).format(**f)
         main = [hook]
@@ -155,11 +155,14 @@ def build_posts(items, today=None, seed=None):
     return posts
 
 
-def question_post(today=None):
-    """リンクなしの「みんなに質問」投稿（商品の宣伝ではないので #PR は不要）"""
+def question_posts(today=None, n=2):
+    """リンクなしの「みんなに質問」投稿（商品の宣伝ではないので #PR は不要）。始めのうちは1日2件"""
     today = today or date.today()
     qs = json.loads(PATTERNS.read_text(encoding="utf-8")).get("engagement_questions", [])
-    return qs[today.toordinal() % len(qs)] if qs else ""
+    if not qs:
+        return []
+    start = (today.toordinal() * n) % len(qs)
+    return [qs[(start + k) % len(qs)] for k in range(n)]
 
 
 def _pattern_weights():

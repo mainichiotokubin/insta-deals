@@ -51,14 +51,14 @@ end tell''')
 
 
 def threads_note_text(draft):
-    from .threads import QUESTION_TIME, TIMES
+    from .threads import QUESTION_TIMES, TIMES
     out = [f"{draft['date_label']} Threads用", ""]
     for p in draft.get("threads", []):
         t = TIMES[(p["no"] - 1) % len(TIMES)]
         out += [f"■ 投稿{p['no']}（おすすめ {t}／写真 {p['image']}）", "▼本文", p["text"], "",
                 "▼最初の返信に貼る", p["reply"], "", "――――――", ""]
-    if draft.get("threads_question"):
-        out += [f"■ みんなに質問（おすすめ {QUESTION_TIME}／写真なし・リンクなし）", draft["threads_question"]]
+    for k, q in enumerate(draft.get("threads_questions") or []):
+        out += [f"■ みんなに質問{k + 1}（おすすめ {QUESTION_TIMES[k % len(QUESTION_TIMES)]}／写真なし・リンクなし）", q, ""]
     return "\n".join(out)
 
 
