@@ -65,8 +65,10 @@ def _timing_banner(d):
 
 def _status_label(d):
     if d["status"] == "approved":
+        from .config import settings
         from .scheduler import ig_time
-        return f"承認済み：インスタ {ig_time(d)}・Threads は予定時刻に順番に投稿"
+        ig = f"インスタ {ig_time(d)} 自動" if settings().get("instagram_auto", True) else f"インスタは手動（おすすめ {ig_time(d)}・写真アプリに保存済み）"
+        return f"承認済み：{ig}・Threads は予定時刻に自動"
     return LABEL.get(d["status"], d["status"])
 
 

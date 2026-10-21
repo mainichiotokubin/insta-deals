@@ -52,7 +52,7 @@ a.item img{{width:72px;height:72px;object-fit:contain;flex:none}}
 def build_page(extra_draft=None):
     s = settings()
     # 投稿済み＋iPhoneに送った（これから手動投稿する）下書きを載せる
-    drafts = [d for d in list_drafts() if d["status"] in ("published", "exported")]
+    drafts = [d for d in list_drafts() if d["status"] in ("published", "exported", "approved")]
     if extra_draft:
         drafts.append(extra_draft)
     drafts.sort(key=lambda d: d["id"], reverse=True)

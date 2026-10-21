@@ -45,8 +45,9 @@ def _public_urls(draft):
 
 def _instagram(draft, now):
     from cli import publish_draft
-    if not env("IG_ACCESS_TOKEN", required=False):
-        return False
+    from .config import settings
+    if not env("IG_ACCESS_TOKEN", required=False) or not settings().get("instagram_auto", True):
+        return False  # 音楽を付けるためインスタは手動投稿（settings.json の instagram_auto）
     if draft["status"] != "approved" or now < _at(now, ig_time(draft)):
         return False
     try:
@@ -160,6 +161,10 @@ def tick(now=None):
         if d.get("demo") or not d.get("approved_at") or not _is_today(d, now):
             continue
         _save_photos(d)
+        if not d.get("marked_posted"):
+            store.mark_posted(d["items"])
+            d["marked_posted"] = True
+            store.save_draft(d)
         if _instagram(d, now):
             d = store.load_draft(d["id"])
         _threads(d, now)
