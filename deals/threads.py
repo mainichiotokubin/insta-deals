@@ -41,7 +41,9 @@ TOPICS = [
      "洗剤をまとめ買いしてる人、買い物上手しかいない。", "まとめ買いでラクしたい人"),
     (("シャンプー",), "シャンプー", "シャンプー、なんとなく同じの使い続けてない？🧴",
      "シャンプーにこだわる人、髪で分かる。", "頭皮や髪のケアを見直したい人"),
-    (("化粧水", "乳液", "セラミド", "保湿"), "保湿ケア", "乾燥する季節、保湿どうしてる？💧",
+    (("ティッシュ", "ティシュ"), "ティッシュ", "ティッシュの箱、気づいたら空っぽになってない？🤍",
+     "ティッシュをまとめ買いしてる人、家の中が平和。", "家族が多い人、ストックを切らしたくない人"),
+    (("化粧水", "乳液", "ローション", "エマルジョン", "セラミド", "保湿"), "保湿ケア", "乾燥する季節、保湿どうしてる？💧",
      "保湿をサボらない人、ほんと尊敬する。", "乾燥が気になる人、保湿を見直したい人"),
     (("日焼け止め", "UV"), "日焼け止め", "日焼け止め、毎年なんとなく選んでない？☀️",
      "秋でも日焼け止め塗る人、未来の肌が強い。", "毎日使う日焼け止めを探している人"),
@@ -99,6 +101,8 @@ def _facts(item, today):
         "point_rate": item["point_rate"],
         "unit": unit[0] if unit else "",
         "per_unit": f"{unit[1]:,}" if unit else "",
+        "per_unit_num": unit[1] if unit else None,
+        "avg_num": item["review_average"],
         "topic": topic, "pain": pain, "oneliner": oneliner, "suits": suits,
         "deadline_note": ("ポイントアップは今日の23:59まで" if ends_today
                           else "今日は楽天の「5と0のつく日」（23:59まで）" if today.day % 5 == 0 else ""),
@@ -109,7 +113,11 @@ def _usable(pattern, f):
     need = set(pattern.get("needs", []))
     if "rank" in need and not (f["rank"] and f["rank"] <= 30):
         return False
-    if "per_unit" in need and not f["per_unit"]:
+    # 「安すぎない？」と言えるのは、1個あたりがはっきり安いときだけ（150円以下）
+    if "per_unit" in need and not (f["per_unit_num"] and f["per_unit_num"] <= 150):
+        return False
+    # 「★◯◯は強すぎ」と言えるのは、評価が本当に高いときだけ（4.6以上）
+    if "high_rating" in need and f["avg_num"] < 4.6:
         return False
     if "points" in need and f["point_rate"] < 5:
         return False

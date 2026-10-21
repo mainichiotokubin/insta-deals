@@ -51,13 +51,16 @@ def pick(candidates, n):
     """スコア順に並べて、同じキーワードから偏らないように選ぶ"""
     from deals.rakuten import score
     ranked = sorted(candidates, key=score, reverse=True)
-    chosen, used = [], {}
+    from deals.caption import short_name
+    chosen, used, brands = [], {}, set()
     for it in ranked:
         key = it["keyword"]
+        brand = short_name(it["name"]).split(" ")[0]  # 商品名の最初の言葉＝だいたいブランド名
         limit = 2 if key.startswith("ランキング") else 1  # 売れ筋ランキングからは2つまで
-        if used.get(key, 0) < limit:
+        if used.get(key, 0) < limit and brand not in brands:  # 同じブランドは1日1つまで
             chosen.append(it)
             used[key] = used.get(key, 0) + 1
+            brands.add(brand)
         if len(chosen) == n:
             return chosen
     for it in ranked:  # キーワードが足りなければ残りから補う
