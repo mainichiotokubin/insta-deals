@@ -99,8 +99,13 @@ def _threads(draft, now):
         target.pop("error", None)
         print(f"Threadsに投稿しました: {draft['id']} {kind} {t}")
     except Exception as e:
-        target["error"] = str(e)[:300]
-        _notify("Threadsの自動投稿に失敗", str(e))
+        import urllib.error
+        if isinstance(e, (urllib.error.URLError, OSError)) and not isinstance(e, urllib.error.HTTPError):
+            target["tries"] -= 1  # 通信エラー（Macがオフライン等）は回数に数えず、次の回にやり直す
+            target["error"] = f"通信エラーのため再試行待ち: {e}"[:300]
+        else:
+            target["error"] = str(e)[:300]
+            _notify("Threadsの自動投稿に失敗", str(e))
     store.save_draft(draft)
     return True
 

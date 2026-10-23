@@ -52,7 +52,12 @@ def pick(candidates, n):
     from deals.rakuten import score
     ranked = sorted(candidates, key=score, reverse=True)
     from deals.caption import short_name
-    chosen, used, brands = [], {}, set()
+    from datetime import datetime, timedelta
+    border = (datetime.now() - timedelta(days=3)).strftime("%Y%m%d")
+    brands = {short_name(it["name"]).split(" ")[0]
+              for d in store.list_drafts() if d["id"][:8] >= border and d["status"] in ("approved", "published", "exported")
+              for it in d["items"]}  # 直近3日に紹介したブランドは避ける
+    chosen, used = [], {}
     for it in ranked:
         key = it["keyword"]
         brand = short_name(it["name"]).split(" ")[0]  # 商品名の最初の言葉＝だいたいブランド名

@@ -47,7 +47,12 @@ def _clean_name(name):
     name = re.sub(r"[【\[].*?[】\]]", " ", name)
     name = re.sub(r"[＼\\].*?[／]", " ", name)  # ＼10/19限定 P10倍／ のような期間限定の告知
     name = re.sub(r"\d{1,2}/\d{1,2}\s*(限定|まで|は|から)\S*", " ", name)
-    name = re.sub(r"(ポイント|P)\s*\d+\s*倍", " ", name)  # バッジと重複するので消す
+    name = re.sub(r"\d{1,2}/\d{1,2}\s*\(?\S?\)?\s*\d{1,2}:\d{2}\s*[~〜～\-－]\s*(\d{1,2}/\d{1,2}\s*\(?\S?\)?\s*)?\d{1,2}:\d{2}", " ", name)  # 10/20 00:00~10/21 23:59
+    name = re.sub(r"\d{1,2}/\d{1,2}\s*(\(\S\))?\s*(\d{1,2}:\d{2})?\s*(まで|迄|限定)", " ", name)  # 10/25(土)23:59まで
+    name = re.sub(r"(ポイント|P)\s*(最大)?\s*\d+\s*倍", " ", name)  # バッジと重複するので消す
+    name = re.sub(r"楽天\s*BRAND\s*DAY|楽天スーパーSALE|お買い物マラソン|エントリーで\S*", " ", name)
+    name = re.sub(r"特典あり|特典付き?|おまけ付き?", " ", name)
+    name = re.sub(r"[《》「」『』〈〉［］]", " ", name)
     name = re.sub(r"[★☆◆◇■□●○♪！!]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()
 
