@@ -103,6 +103,9 @@ def _facts(item, today):
         "per_unit": f"{unit[1]:,}" if unit else "",
         "per_unit_num": unit[1] if unit else None,
         "avg_num": item["review_average"],
+        "drop": item.get("drop_pct", 0),
+        "low_span": item.get("low_span", 0),
+        "lowest": item.get("lowest", False),
         "topic": topic, "pain": pain, "oneliner": oneliner, "suits": suits,
         "deadline_note": ("ポイントアップは今日の23:59まで" if ends_today
                           else "今日は楽天の「5と0のつく日」（23:59まで）" if today.day % 5 == 0 else ""),
@@ -118,6 +121,9 @@ def _usable(pattern, f):
         return False
     # 「★◯◯は強すぎ」と言えるのは、評価が本当に高いときだけ（4.6以上）
     if "high_rating" in need and f["avg_num"] < 4.6:
+        return False
+    # 値下がりの型は、自分で記録した価格で本当に下がっているときだけ
+    if "drop" in need and not (f["lowest"] and f["drop"] >= 3):
         return False
     if "points" in need and f["point_rate"] < 5:
         return False
