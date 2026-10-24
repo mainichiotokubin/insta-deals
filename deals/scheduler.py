@@ -145,6 +145,10 @@ def _save_photos(draft):
     if draft.get("photos_saved"):
         return
     try:
+        export.to_icloud_drive(draft, settings()["account_name"])  # 写真の同期が遅いとき用（ファイルアプリから見られる）
+    except Exception as e:
+        print(f"iCloud Driveへの保存に失敗: {e}")
+    try:
         export.to_photos(draft, settings()["account_name"])
         draft["photos_saved"] = True
         store.save_draft(draft)
