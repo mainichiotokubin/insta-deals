@@ -14,6 +14,30 @@ def _load():
     return json.loads(PATH.read_text(encoding="utf-8")) if PATH.exists() else {}
 
 
+CATALOG = DATA / "catalog.json"
+
+
+def today_catalog():
+    """今日の価格記録で見つけた商品（商品情報つき）"""
+    if not CATALOG.exists():
+        return {}
+    cat = json.loads(CATALOG.read_text(encoding="utf-8"))
+    today = date.today().isoformat()
+    return {c: dict(it) for c, it in cat.items() if it.get("last_seen") == today}
+
+
+def _save_catalog(items):
+    cat = json.loads(CATALOG.read_text(encoding="utf-8")) if CATALOG.exists() else {}
+    today = date.today().isoformat()
+    border = (date.today() - timedelta(days=90)).isoformat()
+    for it in items:
+        keep = {k: v for k, v in it.items() if k not in ("drop_pct", "lowest", "low_span")}
+        keep["last_seen"] = today
+        cat[it["code"]] = keep
+    cat = {c: it for c, it in cat.items() if it.get("last_seen", "") >= border}
+    CATALOG.write_text(json.dumps(cat, ensure_ascii=False), encoding="utf-8")
+
+
 def record(items):
     """{商品コード: {日付: 価格}} を更新する。同じ日は最後の価格で上書き"""
     data = _load()
@@ -26,6 +50,7 @@ def record(items):
             del hist[d]
     PATH.parent.mkdir(parents=True, exist_ok=True)
     PATH.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    _save_catalog(items)
 
 
 def annotate(items):

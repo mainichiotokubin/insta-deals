@@ -35,7 +35,12 @@ def jobs():
     for t in settings()["publish_times"]:
         h, m = t.split(":")
         times.append({"Hour": int(h), "Minute": int(m)})
+    track_times = []
+    for t in settings().get("tracking", {}).get("times", []):
+        h, m = t.split(":")
+        track_times.append({"Hour": int(h), "Minute": int(m)})
     out = [
+        job("com.insta-deals.track", ["track"], StartCalendarInterval=track_times),
         job("com.insta-deals.draft", ["draft"], StartCalendarInterval={"Hour": 7, "Minute": 0}),
         job("com.insta-deals.review", ["review"], RunAtLoad=True, KeepAlive=True),
     ]

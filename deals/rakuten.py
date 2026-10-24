@@ -89,12 +89,13 @@ def _normalize(it, s, group):
     }
 
 
-def _keyword_items(s):
+def _keyword_items(s, keywords=None, point_only=None):
     out = []
-    for kw in s["search_keywords"]:
+    point_only = s.get("only_point_up") if point_only is None else point_only
+    for kw in (keywords or s["search_keywords"]):
         params = {"keyword": kw, "sort": "-reviewCount", "hits": 30, "availability": 1,
                   "imageFlag": 1, "maxPrice": s["max_price"]}
-        if s.get("only_point_up"):
+        if point_only:
             params["pointRateFlag"] = 1
         try:
             data = _get(params)
@@ -113,15 +114,20 @@ def _keyword_items(s):
     return out
 
 
-def _ranking_items(s):
+def _ranking_items(s, pages=None):
     out = []
     for label, genre in s.get("ranking_genres", {}).items():
-        for page in range(1, s.get("ranking_pages", 2) + 1):
-            try:
-                data = _get({"genreId": genre, "page": page}, RANKING)
-            except Exception as e:
-                print(f"  [楽天] ランキング '{label}' p{page} の取得に失敗: {e}")
-                break
+        for page in range(1, (pages or s.get("ranking_pages", 2)) + 1):
+            data = None
+            for attempt in range(2):  # タイムアウトなどは1回だけやり直す
+                try:
+                    data = _get({"genreId": genre, "page": page}, RANKING)
+                    break
+                except Exception as e:
+                    print(f"  [楽天] ランキング '{label}' p{page} の取得に失敗: {e}")
+                    time.sleep(3)
+            if data is None:
+                continue
             for it in data.get("Items", []):
                 it = it.get("Item", it)
                 item = _normalize(it, s, f"ランキング:{label}")
@@ -146,10 +152,41 @@ def search_candidates(exclude_codes=()):
             prev["point_rate"] = max(prev["point_rate"], item["point_rate"])
             continue
         found[item["code"]] = item
+    # 朝の価格記録（track）で今日見つけた商品も候補に入れる（大きな値下がりを拾うため）
+    for code, item in prices.today_catalog().items():
+        found.setdefault(code, item)
     items = list(found.values())
     prices.annotate(items)  # 今日の価格を記録する前に、過去と比べる
     prices.record(items)
     return [it for it in items if it["code"] not in exclude_codes]
+
+
+def _merge(items):
+    found = {}
+    for item in items:
+        prev = found.get(item["code"])
+        if prev:
+            if item["rank"] and not prev["rank"]:
+                prev.update(rank=item["rank"], rank_label=item["rank_label"])
+            prev["point_rate"] = max(prev["point_rate"], item["point_rate"])
+            continue
+        found[item["code"]] = item
+    return list(found.values())
+
+
+def track():
+    """価格の記録だけを行う（1日2回）。いつもの検索より広く、多くの商品を見る。
+    大きく値下がりした商品のリストを返す"""
+    from . import prices
+    s = settings()
+    t = s.get("tracking", {})
+    keywords = s["search_keywords"] + t.get("extra_keywords", [])
+    items = _merge(_keyword_items(s, keywords, point_only=False) + _ranking_items(s, t.get("ranking_pages", 5)))
+    prices.annotate(items)
+    big = sorted([it for it in items if it.get("lowest") and it.get("drop_pct", 0) >= t.get("big_drop_pct", 15)],
+                 key=lambda it: -it["drop_pct"])
+    prices.record(items)
+    return items, big
 
 
 def score(item):

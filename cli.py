@@ -85,6 +85,36 @@ def pick(candidates, n):
     return chosen
 
 
+def _force_big_drops(items, candidates, s):
+    """大きく値下がりした商品（記録上の最高値から15%以上）は、その日の下書きに必ず入れる（最大2つ）"""
+    from deals.rakuten import score
+    th = s.get("tracking", {}).get("big_drop_pct", 15)
+    big = sorted([c for c in candidates if c.get("lowest") and c.get("drop_pct", 0) >= th],
+                 key=lambda c: -c["drop_pct"])[:2]
+    for b in big:
+        if any(b["code"] == it["code"] for it in items):
+            continue
+        weakest = min((it for it in items if it.get("drop_pct", 0) < th), key=score, default=None)
+        if weakest is None:
+            break
+        items[items.index(weakest)] = b
+        print(f"  大きな値下がりを入れました: {b['name'][:30]}（{b['drop_pct']}%ダウン）")
+    # 値下がりの大きい商品を先頭に
+    items.sort(key=lambda it: -(it.get("drop_pct", 0) if it.get("lowest") and it.get("drop_pct", 0) >= th else 0))
+    return items
+
+
+def cmd_track(args):
+    """価格の記録だけを行う（1日2回）。大きな値下がりがあれば通知する"""
+    from deals.rakuten import track
+    items, big = track()
+    print(f"価格を記録しました：{len(items)}商品")
+    for b in big[:5]:
+        print(f"  ↓{b['drop_pct']}% {b['price']:,}円 {b['name'][:40]}")
+    if big:
+        notify("大きな値下がりを発見", f"{big[0]['name'][:25]} が{big[0]['drop_pct']}%ダウン。次の下書きに入れます")
+
+
 def cmd_draft(args):
     s = settings()
     n = s["items_per_post"]
@@ -98,6 +128,7 @@ def cmd_draft(args):
         if len(candidates) < 3:
             sys.exit("候補が少なすぎます。settings.json の条件をゆるめてください")
         items = pick(candidates, n)
+        items = _force_big_drops(items, candidates, s)
 
     now = datetime.now()
     draft_id = now.strftime("%Y%m%d-%H%M%S")
@@ -280,6 +311,7 @@ def main():
     sub.add_parser("ig-login").set_defaults(func=cmd_ig_login)
     sub.add_parser("threads-token").set_defaults(func=cmd_threads_token)
     sub.add_parser("tick").set_defaults(func=cmd_tick)
+    sub.add_parser("track").set_defaults(func=cmd_track)
     args = p.parse_args()
     args.func(args)
 
