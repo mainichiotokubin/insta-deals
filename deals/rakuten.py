@@ -51,7 +51,7 @@ def _clean_name(name):
     name = re.sub(r"\d{1,2}/\d{1,2}\s*(\(\S\))?\s*(\d{1,2}:\d{2})?\s*(まで|迄|限定)", " ", name)  # 10/25(土)23:59まで
     name = re.sub(r"(ポイント|P)\s*(最大)?\s*\d+\s*倍", " ", name)  # バッジと重複するので消す
     name = re.sub(r"楽天\s*BRAND\s*DAY|楽天スーパーSALE|お買い物マラソン|エントリーで\S*", " ", name)
-    name = re.sub(r"特典あり|特典付き?|おまけ付き?", " ", name)
+    name = re.sub(r"特典あり|特典付き?|おまけ付き?|レビュー(記入|投稿|書いて)\S*|クーポン\S*プレゼント", " ", name)
     name = re.sub(r"[《》「」『』〈〉［］]", " ", name)
     name = re.sub(r"[★☆◆◇■□●○♪！!]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()
@@ -101,8 +101,12 @@ def _keyword_items(s):
         except Exception as e:  # 1キーワード失敗しても続ける
             print(f"  [楽天] '{kw}' の取得に失敗: {e}")
             continue
+        core = kw.split()[0]
         for it in data.get("Items", []):
-            item = _normalize(it.get("Item", it), s, kw)
+            raw = it.get("Item", it)
+            if core not in raw.get("itemName", ""):
+                continue  # キーワードの主な言葉が商品名にないものは、検索のずれなので使わない
+            item = _normalize(raw, s, kw)
             if item:
                 out.append(item)
         time.sleep(1.1)  # 楽天APIは1秒1リクエストまで
@@ -161,7 +165,8 @@ def badges(item):
     """画像とキャプションに出す「お得ポイント」（強い順に最大2つ）"""
     out = []
     if item.get("lowest"):
-        out.append("30日最安値")
+        span = item.get("low_span", 30)
+        out.append("30日最安値" if span >= 30 else f"{span}日間で最安値")
     elif item.get("drop_pct", 0) >= 5:
         out.append(f"{item['drop_pct']}%値下がり")
     if item.get("rank") and item["rank"] <= 30:

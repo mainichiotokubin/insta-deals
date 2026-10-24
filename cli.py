@@ -57,15 +57,24 @@ def pick(candidates, n):
     brands = {short_name(it["name"]).split(" ")[0]
               for d in store.list_drafts() if d["id"][:8] >= border and d["status"] in ("approved", "published", "exported")
               for it in d["items"]}  # 直近3日に紹介したブランドは避ける
-    chosen, used = [], {}
+    from deals.threads import _topic
+    COSME = ("化粧水", "日焼け止め", "クレンジング", "ハンドクリーム", "ランキング:コスメ")
+    cat_limit = n - 2  # 日用品・コスメのどちらかに偏るのは最大3つまで（5商品のとき）
+    chosen, used, cats, topics = [], {}, {}, set()
     for it in ranked:
         key = it["keyword"]
         brand = short_name(it["name"]).split(" ")[0]  # 商品名の最初の言葉＝だいたいブランド名
+        cat = "コスメ" if key.startswith(COSME) else "日用品"
+        topic = _topic(it)[0]  # 保湿ケア・メイク落とし など
         limit = 2 if key.startswith("ランキング") else 1  # 売れ筋ランキングからは2つまで
-        if used.get(key, 0) < limit and brand not in brands:  # 同じブランドは1日1つまで
+        if (used.get(key, 0) < limit and brand not in brands  # 同じブランドは避ける
+                and cats.get(cat, 0) < cat_limit
+                and (topic not in topics or topic == "日用品")):  # 同じジャンルは1日1つまで
             chosen.append(it)
             used[key] = used.get(key, 0) + 1
+            cats[cat] = cats.get(cat, 0) + 1
             brands.add(brand)
+            topics.add(topic)
         if len(chosen) == n:
             return chosen
     for it in ranked:  # キーワードが足りなければ残りから補う

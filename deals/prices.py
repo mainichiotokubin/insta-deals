@@ -41,6 +41,7 @@ def annotate(items):
         if (today - date.fromisoformat(min(past))).days < MIN_SPAN:
             continue
         high, low = max(past.values()), min(past.values())
+        it["low_span"] = min(WINDOW_DAYS, (today - date.fromisoformat(min(past))).days + 1)
         it["drop_pct"] = max(0, round((high - it["price"]) / high * 100))
         it["lowest"] = it["price"] < low
     return items
