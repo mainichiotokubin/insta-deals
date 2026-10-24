@@ -52,6 +52,8 @@ def _clean_name(name):
     name = re.sub(r"(ポイント|P)\s*(最大)?\s*\d+\s*倍", " ", name)  # バッジと重複するので消す
     name = re.sub(r"楽天\s*BRAND\s*DAY|楽天スーパーSALE|お買い物マラソン|エントリーで\S*", " ", name)
     name = re.sub(r"特典あり|特典付き?|おまけ付き?|レビュー(記入|投稿|書いて)\S*|クーポン\S*プレゼント", " ", name)
+    name = re.sub(r"[＜<][^＞>]*[＞>]", " ", name)  # ＜まとめ買いクーポン配布中＞ のような告知
+    name = re.sub(r"\S*新発売|\S*新登場", " ", name)
     name = re.sub(r"[《》「」『』〈〉［］]", " ", name)
     name = re.sub(r"[★☆◆◇■□●○♪！!]+", " ", name)
     return re.sub(r"\s+", " ", name).strip()
@@ -153,7 +155,14 @@ def search_candidates(exclude_codes=()):
             continue
         found[item["code"]] = item
     # 朝の価格記録（track）で今日見つけた商品も候補に入れる（大きな値下がりを拾うため）
+    keywords = set(s["search_keywords"]) | set(s.get("tracking", {}).get("extra_keywords", []))
     for code, item in prices.today_catalog().items():
+        kw = item.get("keyword", "")
+        if not kw.startswith("ランキング") and kw not in keywords:
+            continue  # 今は使っていないキーワードで見つけた商品は使わない
+        item["name"] = _clean_name(item["name"])  # 保存したときより掃除のルールが増えていることがあるので、もう一度
+        if any(w in item["name"] for w in s.get("exclude_words", [])):
+            continue
         found.setdefault(code, item)
     items = list(found.values())
     prices.annotate(items)  # 今日の価格を記録する前に、過去と比べる

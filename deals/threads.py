@@ -57,6 +57,8 @@ TOPICS = [
      "ハンドクリーム持ち歩いてる人、優しい人しかいない。", "家事で手が荒れやすい人"),
     (("タオル",), "タオル", "タオル、ゴワゴワしてきたら替えどき🛁",
      "タオルをまとめて新しくする日、ちょっと幸せ。", "タオルをまとめて新しくしたい人"),
+    (("歯磨き", "ハミガキ"), "歯みがき粉", "歯みがき粉、なんとなく同じの使ってない？🪥",
+     "歯みがき粉にこだわる人、笑顔がまぶしい。", "ホワイトニングケアが気になる人"),
     (("歯ブラシ",), "歯ブラシ", "歯ブラシ、1か月で替えてる？🪥",
      "歯ブラシを毎月替える人、ちゃんとしてる。", "家族分をまとめて買いたい人"),
 ]
@@ -160,7 +162,8 @@ def build_posts(items, today=None, seed=None):
         used.add(pat["id"])
         hook = rnd.choice(pat["hooks"]).format(**f)
         main = [hook]
-        if f["deadline_note"]:  # 本文では短く添える
+        aside_ok = "ポイント" in f["deadline_note"] or i <= 2  # 毎回だとくどいので、日のお知らせは1日2件まで
+        if f["deadline_note"] and aside_ok:  # 本文では短く添える
             main.append("（ポイントは今日の23:59まで⏰）" if "ポイント" in f["deadline_note"] else "（今日は5と0のつく日⏰）")
         main += ["", "詳しくはリプ欄に👇", "#PR"]
         posts.append({"no": i, "pattern": pat["id"], "pattern_name": pat["name"],
