@@ -27,7 +27,7 @@ MAX_LEN = 500  # Threads の文字数上限
 
 # 投稿時間のおすすめ（商品5投稿＋質問投稿）
 TIMES = ["7:30", "12:15", "18:00", "20:30", "22:00"]
-QUESTION_TIMES = ["8:30", "21:15"]
+QUESTION_TIMES = ["8:30", "15:30", "21:15"]
 
 # 商品ジャンルごとの「共感ひとこと」「感情の一言」「こんな人に向いてそう」
 TOPICS = [
@@ -169,7 +169,7 @@ def build_posts(items, today=None, seed=None):
     return posts
 
 
-def question_posts(today=None, n=2):
+def question_posts(today=None, n=3):
     """リンクなしの「みんなに質問」投稿（商品の宣伝ではないので #PR は不要）。始めのうちは1日2件"""
     today = today or date.today()
     qs = json.loads(PATTERNS.read_text(encoding="utf-8")).get("engagement_questions", [])
