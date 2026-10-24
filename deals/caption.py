@@ -64,6 +64,23 @@ def _badge_line(item):
     return "｜".join(parts)
 
 
+COSME_WORDS = ("化粧水", "乳液", "ローション", "クレンジング", "クレンズ", "日焼け止め", "UV", "リップ", "パウダ",
+               "ファンデ", "美容液", "クリーム", "アイシャドウ", "マスカラ", "コスメ")
+
+
+def _hashtags(items, s, events):
+    """インスタのハッシュタグは5個まで。1行目の #PR を含めて5個になるように選ぶ"""
+    limit = s.get("hashtag_limit", 5) - 1  # 1行目の #PR の分
+    cosme = sum(1 for it in items if any(w in it["name"] + it.get("keyword", "") for w in COSME_WORDS))
+    genre = "#コスメ" if cosme > len(items) / 2 else "#日用品"
+    tags = [tag for _, tag in events] + [genre] + [t for t in s["hashtags"] if t != "#PR"]
+    out = []
+    for t in tags:
+        if t not in out:
+            out.append(t)
+    return out[:limit]
+
+
 def build_caption(items, date_label, s, events=None):
     """events: 開催中の楽天イベント [(名前, ハッシュタグ)]。None のときはその場で調べる"""
     from .timing import early_reasons
@@ -100,6 +117,6 @@ def build_caption(items, date_label, s, events=None):
         "",
         "※価格・ポイント倍率・在庫は投稿時点の情報です。購入前に商品ページで確認してね🙏",
         "",
-        " ".join(s["hashtags"] + [tag for _, tag in events]),
+        " ".join(_hashtags(items, s, events)),
     ]
     return "\n".join(lines)
