@@ -71,7 +71,7 @@
       "name": "一言＋ポイントを添える",
       "hooks": [
         "{brand}、地味にすごいのでは…\n（今ポイント{point_rate}倍になってる🫣）",
-        "ストック買うなら今かも…\n（{brand}がポイント{point_rate}倍💰）"
+        "気になってた人は今かも…\n（{brand}がポイント{point_rate}倍💰）"
       ],
       "needs": [
         "points"

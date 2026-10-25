@@ -119,6 +119,11 @@ def cmd_track(args):
 
 def cmd_draft(args):
     s = settings()
+    today = datetime.now().strftime("%Y%m%d")
+    if not args.demo and not getattr(args, "force", False) and any(
+            d["id"].startswith(today) and d["status"] in ("pending", "approved", "published") for d in store.list_drafts()):
+        print("今日の下書きはもうあるので、作りません（作り直すときは --force）")
+        return
     n = s["items_per_post"]
     if args.demo:
         items = _demo_items(n)
@@ -300,6 +305,7 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("draft")
     d.add_argument("--demo", action="store_true")
+    d.add_argument("--force", action="store_true")
     d.set_defaults(func=cmd_draft)
     pb = sub.add_parser("publish")
     pb.add_argument("--id")
