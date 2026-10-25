@@ -132,8 +132,36 @@ def _usable(pattern, f):
     return True
 
 
-def _reply(item, f):
-    """最初の返信：詳しい情報とリンク"""
+# 紹介しきれなかった商品へ案内する一言（毎日同じ文にならないよう日替わり）
+MORE_CTA = [
+    "📦 今日はほかにも{rest}つお得なものを見つけてます\n一覧はこちら👉 {page}",
+    "🛒 今日のお得まとめ（全{total}商品）はこちら👉 {page}\nインスタ @{handle} でも毎日まとめてます📸",
+    "👀 ほかのお得アイテムも気になる人は\nプロフィールのリンクからどうぞ👉 {page}",
+    "📸 インスタ @{handle} では、毎日{total}商品を画像でまとめてます\n一覧👉 {page}",
+    "🧺 ストック買いの参考に、今日の{total}商品をまとめました👉 {page}",
+]
+
+
+def _more_cta(no, total, today):
+    from .config import env, settings
+    page = env("PUBLIC_BASE_URL", required=False) or ""
+    if not page:
+        return ""
+    cta = MORE_CTA[(today.toordinal() + no) % len(MORE_CTA)]
+    return cta.format(rest=total - 1, total=total, page=page.rstrip("/") + "/", handle=settings().get("instagram_handle", ""))
+
+
+def _reply(item, f, more=""):
+    """最初の返信：詳しい情報とリンク（500文字を超えそうなら「こんな人に」を省く）"""
+    out = _reply_lines(item, f, more, with_suits=True)
+    if len(out) > MAX_LEN:
+        out = _reply_lines(item, f, more, with_suits=False)
+    if len(out) > MAX_LEN:
+        out = _reply_lines(item, f, "", with_suits=False)
+    return out
+
+
+def _reply_lines(item, f, more, with_suits):
     lines = [f"{f['emoji']} {f['short']}", "", f"💴 {f['price']}円（税込）"]
     for b in badges(item):
         lines.append(("👑 " if "ランキング" in b else "📉 " if ("値下がり" in b or "最安値" in b) else "💰 ") + b)
@@ -142,8 +170,12 @@ def _reply(item, f):
     lines.append(f"⭐️ {f['avg']}（レビュー{f['count']}件）")
     if f["deadline_note"]:
         lines.append(f"⏰ {f['deadline_note']}")
-    lines += ["", "こんな人に向いてそう👇", f"・{f['suits']}", "",
-              "▼商品はこちら（楽天市場）", item["url"], "", "※価格・ポイントは投稿時点の情報です", "#PR"]
+    if with_suits:
+        lines += ["", "こんな人に向いてそう👇", f"・{f['suits']}"]
+    lines += ["", "▼商品はこちら（楽天市場）", item["url"]]
+    if more:
+        lines += ["", more]
+    lines += ["", "※価格・ポイントは投稿時点の情報です", "#PR"]
     return "\n".join(lines)
 
 
@@ -177,7 +209,7 @@ def build_posts(items, today=None, seed=None):
             main.append("（ポイントは今日の23:59まで⏰）" if "ポイント" in f["deadline_note"] else "（今日は5と0のつく日⏰）")
         main += ["", "詳しくはリプ欄に👇", "#PR"]
         posts.append({"no": i, "pattern": pat["id"], "pattern_name": pat["name"],
-                      "text": "\n".join(main)[:MAX_LEN], "reply": _reply(item, f)[:MAX_LEN],
+                      "text": "\n".join(main)[:MAX_LEN], "reply": _reply(item, f, _more_cta(i, len(items), today)),
                       "image": f"t{i}.jpg", "item_code": item["code"]})
     return posts
 

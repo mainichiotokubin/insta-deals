@@ -99,7 +99,7 @@
     ]
   },
   "hashtag_limit": 5,
-  "threads_auto": false,
+  "threads_auto": true,
   "threads_plan": {
     "products": 2,
     "questions": 1,
