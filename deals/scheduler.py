@@ -78,8 +78,9 @@ def _threads_queue(draft, now):
 
 def _threads(draft, now):
     from . import threads_api
-    if not env("THREADS_ACCESS_TOKEN", required=False):
-        return False
+    from .config import settings
+    if not env("THREADS_ACCESS_TOKEN", required=False) or not settings().get("threads_auto", True):
+        return False  # settings.json の threads_auto が false のあいだは投稿しない
     due = _threads_queue(draft, now)
     if not due:
         return False

@@ -98,5 +98,6 @@
       "18:40"
     ]
   },
-  "hashtag_limit": 5
+  "hashtag_limit": 5,
+  "threads_auto": false
 }
