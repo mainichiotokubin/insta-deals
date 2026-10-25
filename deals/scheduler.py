@@ -63,13 +63,17 @@ def _instagram(draft, now):
 
 def _threads_queue(draft, now):
     """投稿時刻を過ぎた、まだ投稿していないThreads投稿（時刻順）"""
-    from .threads import QUESTION_TIMES, TIMES
+    from .config import settings
+    plan = settings().get("threads_plan", {})
+    p_times = plan.get("product_times", ["12:15", "20:30"])
+    q_times = plan.get("question_times", ["18:00"])
     queue = []
-    for p in draft.get("threads", []):
-        queue.append((TIMES[(p["no"] - 1) % len(TIMES)], "post", p))
+    # 自動で投稿するのは、設定した件数だけ（多すぎるとスパム判定される）
+    for p, t in zip(draft.get("threads", [])[:plan.get("products", 2)], p_times):
+        queue.append((t, "post", p))
     state = draft.setdefault("threads_q_state", [{} for _ in draft.get("threads_questions", [])])
-    for k, q in enumerate(draft.get("threads_questions", [])):
-        queue.append((QUESTION_TIMES[k % len(QUESTION_TIMES)], "question", {"text": q, "state": state[k]}))
+    for k, (q, t) in enumerate(zip(draft.get("threads_questions", [])[:plan.get("questions", 1)], q_times)):
+        queue.append((t, "question", {"text": q, "state": state[k]}))
     queue.sort(key=lambda x: _at(now, x[0]))
     return [(t, kind, p) for t, kind, p in queue
             if now >= _at(now, t) and not (p.get("media_id") or p.get("state", {}).get("media_id"))

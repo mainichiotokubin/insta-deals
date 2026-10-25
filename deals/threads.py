@@ -154,13 +154,23 @@ def build_posts(items, today=None, seed=None):
     patterns = json.loads(PATTERNS.read_text(encoding="utf-8"))["patterns"]
     weights = _pattern_weights()
     used, posts = set(), []
+    seen = used_texts()
     for i, item in enumerate(items, 1):
         f = _facts(item, today)
         cands = [p for p in patterns if _usable(p, f) and p["id"] not in used] or \
                 [p for p in patterns if _usable(p, f)]
         pat = rnd.choices(cands, weights=[p.get("weight", 1.0) * weights.get(p["id"], 1.0) for p in cands])[0]
         used.add(pat["id"])
-        hook = rnd.choice(pat["hooks"]).format(**f)
+        hooks = [h.format(**f) for h in pat["hooks"]]
+        fresh = [h for h in hooks if h.split("\n")[0] not in seen]
+        if not fresh:  # この型の言い回しはどれも使用済み → 使っていない型を探す
+            for alt in sorted(cands, key=lambda p: -p.get("weight", 1)):
+                fresh = [h.format(**f) for h in alt["hooks"] if h.format(**f).split("\n")[0] not in seen]
+                if fresh:
+                    pat = alt
+                    break
+        hook = rnd.choice(fresh or hooks)
+        seen.add(hook.split("\n")[0])
         main = [hook]
         aside_ok = "ポイント" in f["deadline_note"] or i <= 2  # 毎回だとくどいので、日のお知らせは1日2件まで
         if f["deadline_note"] and aside_ok:  # 本文では短く添える
@@ -172,14 +182,26 @@ def build_posts(items, today=None, seed=None):
     return posts
 
 
-def question_posts(today=None, n=3):
-    """リンクなしの「みんなに質問」投稿（商品の宣伝ではないので #PR は不要）。始めのうちは1日2件"""
-    today = today or date.today()
+def used_texts():
+    """これまでに投稿した（または承認済みで予定している）Threadsの文章。同じ文章の繰り返しはスパム判定の原因になる"""
+    from . import store
+    used = set()
+    for d in store.list_drafts():
+        if d.get("status") not in ("approved", "published"):
+            continue
+        used |= set(d.get("threads_questions") or [])
+        used |= {p["text"].split("\n")[0] for p in d.get("threads", [])}
+    return used
+
+
+def question_posts(today=None, n=None):
+    """リンクなしの「みんなに質問」投稿（商品の宣伝ではないので #PR は不要）。
+    同じ質問は二度と使わない。使える質問がなくなったら出さない（繰り返すよりまし）"""
+    from .config import settings
+    n = settings().get("threads_plan", {}).get("questions", 1) if n is None else n
     qs = json.loads(PATTERNS.read_text(encoding="utf-8")).get("engagement_questions", [])
-    if not qs:
-        return []
-    start = (today.toordinal() * n) % len(qs)
-    return [qs[(start + k) % len(qs)] for k in range(n)]
+    used = used_texts()
+    return [q for q in qs if q not in used][:n]
 
 
 def _pattern_weights():

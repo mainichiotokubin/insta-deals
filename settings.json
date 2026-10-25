@@ -99,5 +99,16 @@
     ]
   },
   "hashtag_limit": 5,
-  "threads_auto": false
+  "threads_auto": false,
+  "threads_plan": {
+    "products": 2,
+    "questions": 1,
+    "product_times": [
+      "12:15",
+      "20:30"
+    ],
+    "question_times": [
+      "18:00"
+    ]
+  }
 }
